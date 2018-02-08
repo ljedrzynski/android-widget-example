@@ -15,7 +15,7 @@
         android:layout_width="wrap_content"
         android:layout_alignParentBottom="true">
         <Button
-            android:id="@+id/btn_previous_image"
+            android:id="@+id/btn_prev_image"
             android:layout_height="wrap_content"
             android:layout_width="wrap_content"
             android:layout_gravity="bottom"
