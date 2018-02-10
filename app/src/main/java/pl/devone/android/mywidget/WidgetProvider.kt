@@ -59,47 +59,62 @@ class WidgetProvider : AppWidgetProvider() {
                 updateWidgetLayout(AppWidgetManager.getInstance(context), context!!, R.layout.image_brs,
                         hashMapOf(R.id.btn_back to getPendingSelfIntent(context, "OPEN_WIDGET_MENU"),
                                 R.id.btn_next_image to getPendingSelfIntent(context, "NEXT_IMAGE"),
-                                R.id.btn_prev_image to getPendingSelfIntent(context, "PREV_IMAGE")))
+                                R.id.btn_prev_image to getPendingSelfIntent(context, "PREV_IMAGE")),
+                        hashMapOf(R.id.imageView1 to getResourceId(context, "pic", "drawable", 1)))
             }
             "OPEN_WIDGET_MENU" -> {
+                mp?.stop()
                 setWidgetMainLayout(AppWidgetManager.getInstance(context), context!!)
             }
             "NEXT_IMAGE" -> {
-                updateWidgetLayout(AppWidgetManager.getInstance(context), context!!, RemoteViews(context.packageName, R.layout.image_brs).apply {
-                    setImageViewResource(R.id.imageView1, context.resources.getIdentifier(String.format("pic_%s", ++imageIdx),
-                            "drawable", context.packageName))
-                })
+                val resId = getResourceId(context!!, "pic", "drawable", imageIdx + 1)
+                if (resId > 0) {
+                    updateWidgetLayout(AppWidgetManager.getInstance(context), context, RemoteViews(context.packageName, R.layout.image_brs).apply {
+                        setImageViewResource(R.id.imageView1, resId)
+                    })
+                    imageIdx++
+                }
             }
             "PREV_IMAGE" -> {
-                updateWidgetLayout(AppWidgetManager.getInstance(context), context!!, RemoteViews(context.packageName, R.layout.image_brs).apply {
-                    setImageViewResource(R.id.imageView1, context.resources.getIdentifier(String.format("pic_%s", --imageIdx),
-                            "drawable", context.packageName))
-                })
+                val resId = getResourceId(context!!, "pic", "drawable", imageIdx - 1)
+                if (resId > 0) {
+                    updateWidgetLayout(AppWidgetManager.getInstance(context), context!!, RemoteViews(context.packageName, R.layout.image_brs).apply {
+                        setImageViewResource(R.id.imageView1, resId)
+                    })
+                    imageIdx--
+                }
             }
             "NEXT_SONG" -> {
-                if (mp != null) {
-                    if (mp?.isPlaying!!) {
-                        mp!!.stop()
-                        mp!!.release()
+                val resId = getResourceId(context!!, "song", "raw", songIdx + 1)
+                if (resId > 0) {
+                    if (mp != null) {
+                        if (mp?.isPlaying!!) {
+                            mp!!.stop()
+                            mp!!.release()
+                        }
                     }
+                    MediaPlayer.create(context.applicationContext, resId).run {
+                        mp = this
+                        start()
+                    }
+                    songIdx++
                 }
-                MediaPlayer.create(context!!.getApplicationContext(), context.resources.getIdentifier(String.format("song_%s", ++songIdx),
-                        "raw", context.packageName)).run {
-                    mp = this
-                    start()
-                }
+
             }
             "PREV_SONG" -> {
-                if (mp != null) {
-                    if (mp?.isPlaying!!) {
-                        mp!!.stop()
-                        mp!!.release()
+                val resId = getResourceId(context!!, "song", "raw", songIdx - 1)
+                if (resId > 0) {
+                    if (mp != null) {
+                        if (mp?.isPlaying!!) {
+                            mp!!.stop()
+                            mp!!.release()
+                        }
                     }
-                }
-                MediaPlayer.create(context!!.getApplicationContext(), context.resources.getIdentifier(String.format("song_%s", --songIdx),
-                        "raw", context.packageName)).run {
-                    mp = this
-                    start()
+                    MediaPlayer.create(context.applicationContext, resId).run {
+                        mp = this
+                        start()
+                    }
+                    songIdx--
                 }
             }
             "PLAY_SONG" -> {
@@ -108,25 +123,35 @@ class WidgetProvider : AppWidgetProvider() {
                         if (isPlaying) pause() else start()
                     }
                 } else {
-                    MediaPlayer.create(context!!.getApplicationContext(), context.resources.getIdentifier(String.format("song_%s", ++songIdx),
-                            "raw", context.packageName)).run {
-                        mp = this
-                        start()
+                    val resId = getResourceId(context!!, "song", "raw", songIdx + 1)
+                    if (resId > 0) {
+                        MediaPlayer.create(context.applicationContext, resId).run {
+                            mp = this
+                            start()
+                        }
                     }
+                    songIdx++
                 }
             }
         }
     }
 
-    private fun updateWidgetLayout(appWidgetManager: AppWidgetManager, context: Context, remoteViews: RemoteViews) {
-        appWidgetManager.updateAppWidget(ComponentName(context, WidgetProvider::class.java), remoteViews)
-    }
+    private fun getResourceId(context: Context, resPrefix: String, resType: String, resId: Int): Int =
+            context.resources.getIdentifier(String.format("%s_%s", resPrefix, resId), resType, context.packageName)
+
+    private fun updateWidgetLayout(appWidgetManager: AppWidgetManager, context: Context, remoteViews: RemoteViews) =
+            appWidgetManager.updateAppWidget(ComponentName(context, WidgetProvider::class.java), remoteViews)
 
     private fun updateWidgetLayout(appWidgetManager: AppWidgetManager, context: Context, layoutId: Int,
-                                   clickActions: HashMap<Int, PendingIntent>) =
+                                   clickActions: HashMap<Int, PendingIntent>, resources: HashMap<Int, Int>? = null) =
             updateWidgetLayout(appWidgetManager, context, RemoteViews(context.packageName, layoutId).apply {
                 for (entry in clickActions) {
                     setOnClickPendingIntent(entry.key, entry.value)
+                }
+                if (resources != null) {
+                    for (entry in resources) {
+                        setImageViewResource(entry.key, entry.value)
+                    }
                 }
             })
 
